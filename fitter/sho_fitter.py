@@ -169,7 +169,7 @@ class SHO_data:
         Qs=np.zeros(self.raw_data.shape[0])
         phases=np.zeros(self.raw_data.shape[0])
         amplitudes=np.zeros(self.raw_data.shape[0])
-        normalization=np.max(np.abs(self.raw_data))/0.01
+        normalization=np.max(np.abs(self.raw_data))/1.0
         
         num_batches = int(np.ceil(self.raw_data.shape[0] / batch_size))
         self.num_batches = num_batches
@@ -184,10 +184,10 @@ class SHO_data:
             Qs[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[2]
             phases[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[3]
             
-        self.DNN_fit['amplitude']=np.reshape(amplitudes,(self.raw_data.shape[0]))
-        self.DNN_fit['resonant_frequency']=np.reshape(w_rs,(self.raw_data.shape[0]))
-        self.DNN_fit['Q']=np.reshape(Qs,(self.raw_data.shape[0]))
-        self.DNN_fit['phase']=np.reshape(phases,(self.raw_data.shape[0]))
+        self.DNN_fit['amplitude']=amplitudes
+        self.DNN_fit['resonant_frequency']=w_rs
+        self.DNN_fit['Q']=Qs
+        self.DNN_fit['phase']=phases
         
     def do_LS_fitting(self):
         
@@ -218,7 +218,7 @@ class SHO_data:
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data))/0.01
+        normalization=np.max(np.abs(self.raw_data))/1.0
         
         for i in tqdm(range(self.x*self.y)):
             ddata=self.raw_data[i]/normalization
@@ -266,7 +266,7 @@ class SHO_data:
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data))/0.01
+        normalization=np.max(np.abs(self.raw_data))/1.0
         num_batches = int(np.ceil(self.raw_data.shape[0] / batch_size))
         self.num_batches = num_batches
         for i in tqdm(range(num_batches)):
@@ -344,7 +344,7 @@ class SHO_data:
             return SHO_fit_flattened(u, x) - y
         
         wvec=self.freq_vector 
-        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/0.01
+        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/1.0
         i=index
         ddata=self.raw_data['Measurement_000']['Channel_000']['Raw_Data'][i]/normalization   
         ####   
