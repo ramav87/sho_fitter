@@ -11,7 +11,7 @@ from keras.layers.convolutional import Convolution1D, Convolution2D, MaxPooling2
 from keras.utils import np_utils
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from keras.utils.training_utils import multi_gpu_model
+#from keras.utils.training_utils import multi_gpu_model
 from keras.layers import Conv1D
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -22,15 +22,16 @@ import h5py
 
 class SHO_data:
     
-    def __init__(self, file, x, y):
+    def __init__(self, h5_main):
+        """
+        Input: USID h5_main raw dataset
+        """
      
-        self.file=file
+        self.h5_main=h5_main
         self.model='network has not been loaded'
         self.raw_data='data has not been loaded'
               
         self.freq_vector='data has not been loaded'
-        self.x=x
-        self.y=y
         
         self.ls_fit={'phase':'none','amplitude':'none','Q':'none','resonant_frequency':'none'}
         self.DNN_fit={'phase':'none','amplitude':'none','Q':'none','resonant_frequency':'none'}
@@ -77,12 +78,11 @@ class SHO_data:
 
     def return_split_data(self,input_mat):
         #Given a 2d matrix with complex values return a real and imag matrix
-        a,b = input_mat.shape
-        final_mat = np.zeros(shape=(a,b,2))
+        
+        final_mat = np.zeros(shape=(input_mat.shape[-2],input_mat.shape[-1],2))
         final_mat[:,:,0] = np.real(input_mat)
         final_mat[:,:,1] = np.imag(input_mat)
     
-
         return final_mat
     
  
@@ -92,10 +92,13 @@ class SHO_data:
     ###############################################################################################################################
    
     def load_raw_data(self):
-        self.raw_data = h5py.File(self.file, 'r')
-        self.freq_vector = np.linspace(0, 1, len(self.raw_data['Measurement_000']['Channel_000']['Bin_Frequencies']))
-        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/0.01
-        h5py.File(self.file, 'r').close()
+        freq_vector = self.h5_main.h5_spec_vals[self.h5_main.spec_dim_labels.index('Frequency'),:]
+        freq_vector = freq_vector[:len(np.unique(freq_vector))]
+        self.raw_data = np.array(self.h5_main).reshape(-1, len(freq_vector))
+        self.freq_vector = np.linspace(0, 1, len(freq_vector))
+        self.x = len(freq_vector)* self.h5_main.pos_dim_sizes[0]
+        self.y = len(freq_vector)* self.h5_main.pos_dim_sizes[1]
+
         
     def load_model(self,model_name):
         from keras.models import load_model
@@ -145,13 +148,13 @@ class SHO_data:
                 yield func_results, func_parms
             batch_num=batch_num+1
                 
-        data_gen = myGenerator(0,50, 100000, wvec) #initialize the generator object        
+        data_gen = myGenerator(0,10, 100000, wvec) #initialize the generator object        
         for X,y in data_gen:
             X = self.return_split_data(X)
             X_train, X_test, y_train, y_test = train_test_split(X,y,random_state = 32, test_size = 0.20)
             self.model.fit(X_train, y_train, validation_data=(X_test, y_test),verbose=1)
     
-        self.model.save_weights(str(file)+'_model_new.h5')
+        self.model.save_weights(str(self.h5_main.file.filename)+'_model_new.h5')
         
     def load_weights(self,weights_file):
         self.model.load_weights(weights_file)   
@@ -161,15 +164,17 @@ class SHO_data:
     # FITTING DATA
     ###############################################################################################################################        
     
-    def do_DNN_fitting(self):
+    def do_DNN_fitting(self, batch_size = 256):
         w_rs=np.zeros(self.x*self.y)
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/0.01
+        normalization=np.max(np.abs(self.raw_data))/0.01
         
-        for i in tqdm(range(self.x*self.y)):
-            ddata=self.raw_data['Measurement_000']['Channel_000']['Raw_Data'][i]/normalization
+        num_batches = int(np.ceil(self.x*self.y / batch_size))
+
+        for i in tqdm(range(num_batches)):
+            ddata=self.raw_data[i*batch_size:(i+1)*batch_size,:]/normalization
             sho_ex = ddata
             sho_ex_mat = self.return_split_data(sho_ex[None,:])
             predicted_parms_DNN = self.model.predict(sho_ex_mat)[0]
@@ -179,10 +184,10 @@ class SHO_data:
             Qs[i]=predicted_parms_DNN[2]
             phases[i]=predicted_parms_DNN[3]
             
-            self.DNN_fit['amplitude']=np.reshape(amplitudes,(self.x,self.y))
-            self.DNN_fit['resonant_frequency']=np.reshape(w_rs,(self.x,self.y))
-            self.DNN_fit['Q']=np.reshape(Qs,(self.x,self.y))
-            self.DNN_fit['phase']=np.reshape(phases,(self.x,self.y))
+        self.DNN_fit['amplitude']=np.reshape(amplitudes,(self.x,self.y))
+        self.DNN_fit['resonant_frequency']=np.reshape(w_rs,(self.x,self.y))
+        self.DNN_fit['Q']=np.reshape(Qs,(self.x,self.y))
+        self.DNN_fit['phase']=np.reshape(phases,(self.x,self.y))
         
     def do_LS_fitting(self):
         
@@ -213,10 +218,10 @@ class SHO_data:
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/0.01
+        normalization=np.max(np.abs(self.raw_data))/0.01
         
         for i in tqdm(range(self.x*self.y)):
-            ddata=self.raw_data['Measurement_000']['Channel_000']['Raw_Data'][i]/normalization
+            ddata=self.raw_data[i]/normalization
             u=wvec
             y = np.hstack([np.real(ddata),np.imag(ddata)])
             x0 = np.array([0.5,0.5,0.5,0.5])
@@ -261,10 +266,11 @@ class SHO_data:
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/0.01
+        normalization=np.max(np.abs(self.raw_data))/0.01
         
         for i in tqdm(range(self.x*self.y)):
-            ddata=self.raw_data['Measurement_000']['Channel_000']['Raw_Data'][i]/normalization
+            ddata=self.raw_data[i]/normalization
+            #print('ddata shape is {}'.format(ddata.shape))
             sho_ex = ddata
             sho_ex_mat = self.return_split_data(sho_ex[None,:])
             predicted_parms = self.model.predict(sho_ex_mat)[0]
