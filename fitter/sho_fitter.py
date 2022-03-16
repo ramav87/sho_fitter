@@ -177,6 +177,7 @@ class SHO_data:
             ddata=self.raw_data[i*batch_size:(i+1)*batch_size,:]/normalization
             sho_ex = ddata
             sho_ex_mat = self.return_split_data(sho_ex[None,:])
+            print('size is sho_ex_mat is {}'.format(sho_ex_mat.shape))
             predicted_parms_DNN = self.model.predict(sho_ex_mat)[0]
 
             amplitudes[i]=predicted_parms_DNN[0]    
