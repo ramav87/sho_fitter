@@ -184,10 +184,10 @@ class SHO_data:
             Qs[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[2]
             phases[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[3]
             
-        self.DNN_fit['amplitude']=np.reshape(amplitudes,(self.x,self.y))
-        self.DNN_fit['resonant_frequency']=np.reshape(w_rs,(self.x,self.y))
-        self.DNN_fit['Q']=np.reshape(Qs,(self.x,self.y))
-        self.DNN_fit['phase']=np.reshape(phases,(self.x,self.y))
+        self.DNN_fit['amplitude']=np.reshape(amplitudes,(self.raw_data.shape[0]))
+        self.DNN_fit['resonant_frequency']=np.reshape(w_rs,(self.raw_data.shape[0]))
+        self.DNN_fit['Q']=np.reshape(Qs,(self.raw_data.shape[0]))
+        self.DNN_fit['phase']=np.reshape(phases,(self.raw_data.shape[0]))
         
     def do_LS_fitting(self):
         
