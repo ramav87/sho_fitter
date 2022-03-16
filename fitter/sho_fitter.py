@@ -165,10 +165,10 @@ class SHO_data:
     ###############################################################################################################################        
     
     def do_DNN_fitting(self, batch_size = 256):
-        w_rs=np.zeros(self.x*self.y)
-        Qs=np.zeros(self.x*self.y)
-        phases=np.zeros(self.x*self.y)
-        amplitudes=np.zeros(self.x*self.y)
+        w_rs=np.zeros(self.raw_data.shape[0])
+        Qs=np.zeros(self.raw_data.shape[0])
+        phases=np.zeros(self.raw_data.shape[0])
+        amplitudes=np.zeros(self.raw_data.shape[0])
         normalization=np.max(np.abs(self.raw_data))/0.01
         
         num_batches = int(np.ceil(self.raw_data.shape[0] / batch_size))
@@ -177,7 +177,6 @@ class SHO_data:
             ddata=self.raw_data[i*batch_size:(i+1)*batch_size,:]/normalization
             sho_ex = ddata
             sho_ex_mat = self.return_split_data(sho_ex[None,:])
-            print('size is sho_ex_mat is {}'.format(sho_ex_mat.shape))
             predicted_parms_DNN = self.model.predict(sho_ex_mat)[0]
 
             amplitudes[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[0]    
@@ -238,7 +237,7 @@ class SHO_data:
             self.ls_fit['Q']=np.reshape(Qs,(self.x,self.y))
             self.ls_fit['phase']=np.reshape(phases,(self.x,self.y))
         
-    def do_hybrid_fitting(self):
+    def do_hybrid_fitting(self, batch_size = 256):
                 
         def SHO_fit_flattened(wvec,p):
 
@@ -268,8 +267,9 @@ class SHO_data:
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
         normalization=np.max(np.abs(self.raw_data))/0.01
-        
-        for i in tqdm(range(self.x*self.y)):
+        num_batches = int(np.ceil(self.raw_data.shape[0] / batch_size))
+        self.num_batches = num_batches
+        for i in tqdm(range(num_batches)):
             ddata=self.raw_data[i]/normalization
             #print('ddata shape is {}'.format(ddata.shape))
             sho_ex = ddata
@@ -277,11 +277,12 @@ class SHO_data:
             predicted_parms = self.model.predict(sho_ex_mat)[0]
             u=wvec
             y=np.hstack([np.real(sho_ex),np.imag(sho_ex)])
-            x0 = np.array([predicted_parms[0],
-                           predicted_parms[1],
-                           predicted_parms[2],
-                           predicted_parms[3]])
-           
+            x0 = np.array([predicted_parms[:,0],
+                           predicted_parms[:,1],
+                           predicted_parms[:,2],
+                           predicted_parms[:,3]])
+            x0 = np.clip(x0, 0.1, 0.9)
+            '''
             if x0[2]==0:
                 x0[2]=0.1
             elif x0[2]==1:
@@ -303,7 +304,7 @@ class SHO_data:
                 x0[0]=0.1
             else:
                 x0[0]=x0[0]   
-            
+            '''
             
             try:
                 predicted_parms_hybrid=least_squares(fun, x0, args=(u, y),bounds=(0,1),verbose=0).x
