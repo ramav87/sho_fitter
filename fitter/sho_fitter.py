@@ -122,7 +122,7 @@ class SHO_data:
         model.compile(loss='mse', optimizer='Adam', metrics=['accuracy'])
         self.model=model
         
-    def fit_model(self):
+    def fit_model(self, max_batch_num=10,num_curves = 100000, **kwargs):
         wvec=self.freq_vector 
         def myGenerator(batch_num, max_batch_num, num_curves, wvec): 
             while True:
@@ -146,13 +146,13 @@ class SHO_data:
                     func_parms[i,:] = parms
 
                 yield func_results, func_parms
-            batch_num=batch_num+1
+                batch_num=batch_num+1
                 
-        data_gen = myGenerator(0,10, 100000, wvec) #initialize the generator object        
+        data_gen = myGenerator(0,max_batch_num, num_curves, wvec) #initialize the generator object        
         for X,y in data_gen:
             X = self.return_split_data(X)
             X_train, X_test, y_train, y_test = train_test_split(X,y,random_state = 32, test_size = 0.20)
-            self.model.fit(X_train, y_train, validation_data=(X_test, y_test),verbose=1)
+            self.model.fit(X_train, y_train, validation_data=(X_test, y_test),verbose=1,**kwargs )
     
         self.model.save_weights(str(self.h5_main.file.filename)+'_model_new.h5')
         
