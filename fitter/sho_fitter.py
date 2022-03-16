@@ -171,8 +171,8 @@ class SHO_data:
         amplitudes=np.zeros(self.x*self.y)
         normalization=np.max(np.abs(self.raw_data))/0.01
         
-        num_batches = int(np.ceil(self.x*self.y / batch_size))
-
+        num_batches = int(np.ceil(self.raw_data.shape[0] / batch_size))
+        self.num_batches = num_batches
         for i in tqdm(range(num_batches)):
             ddata=self.raw_data[i*batch_size:(i+1)*batch_size,:]/normalization
             sho_ex = ddata
@@ -180,10 +180,10 @@ class SHO_data:
             print('size is sho_ex_mat is {}'.format(sho_ex_mat.shape))
             predicted_parms_DNN = self.model.predict(sho_ex_mat)[0]
 
-            amplitudes[i]=predicted_parms_DNN[0]    
-            w_rs[i]=predicted_parms_DNN[1]
-            Qs[i]=predicted_parms_DNN[2]
-            phases[i]=predicted_parms_DNN[3]
+            amplitudes[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[0]    
+            w_rs[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[1]
+            Qs[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[2]
+            phases[i*batch_size:(i+1)*batch_size]=predicted_parms_DNN[3]
             
         self.DNN_fit['amplitude']=np.reshape(amplitudes,(self.x,self.y))
         self.DNN_fit['resonant_frequency']=np.reshape(w_rs,(self.x,self.y))
