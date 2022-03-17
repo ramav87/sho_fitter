@@ -94,6 +94,7 @@ class SHO_data:
     def load_raw_data(self):
         freq_vector = self.h5_main.h5_spec_vals[self.h5_main.spec_dim_labels.index('Frequency'),:]
         freq_vector = freq_vector[:len(np.unique(freq_vector))]
+        self.real_freq_vector = freq_vector
         self.raw_data = np.array(self.h5_main).reshape(-1, len(freq_vector))
         self.freq_vector = np.linspace(0, 1, len(freq_vector))
         self.x = len(freq_vector)* self.h5_main.pos_dim_sizes[0]
@@ -195,8 +196,8 @@ class SHO_data:
 
             Amp, w_0, Q, phi=p[0],p[1],p[2],p[3]
 
-            w0 = 340E5
-            wmax = 360E5
+            w0 = np.min(self.real_freq_vector)
+            wmax = np.max(self.real_freq_vector)
 
             Amp = 1E-3 * Amp
             w_0 = w0 + w_0*1E8*wmax #Scale it up
@@ -218,7 +219,7 @@ class SHO_data:
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data))/1.0
+        normalization=np.max(np.abs(self.raw_data))/0.01
         
         for i in tqdm(range(self.x*self.y)):
             ddata=self.raw_data[i]/normalization
@@ -243,8 +244,8 @@ class SHO_data:
 
             Amp, w_0, Q, phi=p[0],p[1],p[2],p[3]
 
-            w0 = 340E5
-            wmax = 360E5
+            w0 = np.min(self.real_freq_vector)
+            wmax = np.max(self.real_freq_vector)
 
             Amp = 1E-3 * Amp
             w_0 = w0 + w_0*1E8*wmax #Scale it up
@@ -266,7 +267,7 @@ class SHO_data:
         Qs=np.zeros(self.x*self.y)
         phases=np.zeros(self.x*self.y)
         amplitudes=np.zeros(self.x*self.y)
-        normalization=np.max(np.abs(self.raw_data))/1.0
+        normalization=np.max(np.abs(self.raw_data))/0.01
         num_batches = int(np.ceil(self.raw_data.shape[0] / batch_size))
         self.num_batches = num_batches
         for i in tqdm(range(num_batches)):
@@ -326,8 +327,8 @@ class SHO_data:
 
             Amp, w_0, Q, phi=p[0],p[1],p[2],p[3]
 
-            w0 = 340E5
-            wmax = 360E5
+            w0 = np.min(self.real_freq_vector)
+            wmax = np.max(self.real_freq_vector)
 
             Amp = 1E-3 * Amp
             w_0 = w0 + w_0*1E8*wmax #Scale it up
