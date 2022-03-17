@@ -123,7 +123,7 @@ class SHO_data:
         model.compile(loss='mse', optimizer='Adam', metrics=['accuracy'])
         self.model=model
         
-    def fit_model(self, max_batch_num=10,num_curves = 100000, **kwargs):
+    def fit_model(self, max_batch_num=30,num_curves = 100000, **kwargs):
         wvec=self.freq_vector 
         def myGenerator(batch_num, max_batch_num, num_curves, wvec): 
             while True:
@@ -152,7 +152,7 @@ class SHO_data:
         data_gen = myGenerator(0,max_batch_num, num_curves, wvec) #initialize the generator object        
         for X,y in data_gen:
             X = self.return_split_data(X)
-            X_train, X_test, y_train, y_test = train_test_split(X,y,random_state = 32, test_size = 0.20)
+            X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.20)
             self.model.fit(X_train, y_train, validation_data=(X_test, y_test),verbose=1,**kwargs )
     
         self.model.save_weights(str(self.h5_main.file.filename)+'_model_new.h5')
@@ -196,14 +196,15 @@ class SHO_data:
 
             Amp, w_0, Q, phi=p[0],p[1],p[2],p[3]
 
-            w0 = np.min(self.real_freq_vector)
+            wmin = np.min(self.real_freq_vector)
             wmax = np.max(self.real_freq_vector)
 
             Amp = 1E-3 * Amp
-            w_0 = w0 + w_0*1E8*wmax #Scale it up
+            w_0 = wmin + (wmax-wmin)*w_0 #Scale it up
+            wvec = wmin + (wmax- wmin)*wvec
             phi = -1*np.pi+2*np.pi*phi #Scale it up
             Q = Q*100 #Scale it up
-            wvec = wvec*1E8*wmax + w0
+           
             func = Amp * np.exp(1.j * phi) * w_0 ** 2 / (wvec ** 2 - 1j * wvec * w_0 / Q - w_0 ** 2)
 
             noise=0.0025*np.random.uniform(0,1)*0
@@ -244,14 +245,14 @@ class SHO_data:
 
             Amp, w_0, Q, phi=p[0],p[1],p[2],p[3]
 
-            w0 = np.min(self.real_freq_vector)
+            wmin = np.min(self.real_freq_vector)
             wmax = np.max(self.real_freq_vector)
 
             Amp = 1E-3 * Amp
-            w_0 = w0 + w_0*1E8*wmax #Scale it up
             phi = -1*np.pi+2*np.pi*phi #Scale it up
             Q = Q*100 #Scale it up
-            wvec = wvec*1E8*wmax + w0
+            w_0 = wmin + (wmax-wmin)*w_0 #Scale it up
+            wvec = wmin + (wmax- wmin)*wvec
             func = Amp * np.exp(1.j * phi) * w_0 ** 2 / (wvec ** 2 - 1j * wvec * w_0 / Q - w_0 ** 2)
 
             noise=0.0025*np.random.uniform(0,1)*0
@@ -327,14 +328,14 @@ class SHO_data:
 
             Amp, w_0, Q, phi=p[0],p[1],p[2],p[3]
 
-            w0 = np.min(self.real_freq_vector)
+            wmin = np.min(self.real_freq_vector)
             wmax = np.max(self.real_freq_vector)
 
             Amp = 1E-3 * Amp
-            w_0 = w0 + w_0*1E8*wmax #Scale it up
+            w_0 = wmin + (wmax-wmin)*w_0 #Scale it up
+            wvec = wmin + (wmax- wmin)*wvec
             phi = -1*np.pi+2*np.pi*phi #Scale it up
             Q = Q*100 #Scale it up
-            wvec = wvec*1E8*wmax + w0
             func = Amp * np.exp(1.j * phi) * w_0 ** 2 / (wvec ** 2 - 1j * wvec * w_0 / Q - w_0 ** 2)
 
             noise=0.0025*np.random.uniform(0,1)*0
@@ -345,7 +346,7 @@ class SHO_data:
             return SHO_fit_flattened(u, x) - y
         
         wvec=self.freq_vector 
-        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/1.0
+        normalization=np.max(np.abs(self.raw_data['Measurement_000']['Channel_000']['Raw_Data']))/0.01
         i=index
         ddata=self.raw_data['Measurement_000']['Channel_000']['Raw_Data'][i]/normalization   
         ####   
